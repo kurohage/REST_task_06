@@ -1,9 +1,10 @@
 from rest_framework.generics import ListAPIView, RetrieveAPIView, RetrieveUpdateAPIView, DestroyAPIView, CreateAPIView
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from datetime import datetime
 
 from .models import Flight, Booking
 from .serializers import FlightSerializer, BookingSerializer, BookingDetailsSerializer, UpdateBookingSerializer, RegisterSerializer, AdminUpdateBookingSerializer
-
+from .permissions import PermBookingIsOwnerOrStaff, PermBooking3DaysAway
 
 class FlightsList(ListAPIView):
 	queryset = Flight.objects.all()
@@ -12,6 +13,7 @@ class FlightsList(ListAPIView):
 
 class BookingsList(ListAPIView):
 	serializer_class = BookingSerializer
+	permission_classes = [IsAuthenticated]
 
 	def get_queryset(self):
 		return Booking.objects.filter(user=self.request.user, date__gte=datetime.today())
@@ -20,12 +22,14 @@ class BookingsList(ListAPIView):
 class BookingDetails(RetrieveAPIView):
 	queryset = Booking.objects.all()
 	serializer_class = BookingDetailsSerializer
+	permission_classes = [IsAuthenticated, PermBookingIsOwnerOrStaff]
 	lookup_field = 'id'
 	lookup_url_kwarg = 'booking_id'
 
 
 class UpdateBooking(RetrieveUpdateAPIView):
 	queryset = Booking.objects.all()
+	permission_classes = [IsAuthenticated, PermBookingIsOwnerOrStaff, PermBooking3DaysAway]
 	lookup_field = 'id'
 	lookup_url_kwarg = 'booking_id'
 
@@ -40,10 +44,12 @@ class CancelBooking(DestroyAPIView):
 	queryset = Booking.objects.all()
 	lookup_field = 'id'
 	lookup_url_kwarg = 'booking_id'
+	permission_classes = [IsAuthenticated, PermBookingIsOwnerOrStaff, PermBooking3DaysAway]
 
 
 class BookFlight(CreateAPIView):
 	serializer_class = AdminUpdateBookingSerializer
+	permission_classes = [IsAuthenticated]
 
 	def perform_create(self, serializer):
 		serializer.save(user=self.request.user, flight_id=self.kwargs['flight_id'])
